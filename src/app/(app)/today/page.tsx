@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InstallTip } from "@/components/InstallTip";
 import { addDays, dayKey, formatDay, formatTime, startOfDay } from "@/lib/dates";
 import type { ActivityLog, Checkin, FoodLog } from "@/lib/logs";
 import { createClient } from "@/lib/supabase/server";
@@ -29,6 +30,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-4">
+      <InstallTip />
       <div className="flex items-center justify-between">
         <Link href={`/today?day=${addDays(day, -1)}`} className="px-2 py-1 text-rose-800" aria-label="Previous day">
           ←
