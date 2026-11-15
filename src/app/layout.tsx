@@ -5,19 +5,25 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Nourish",
   description: "A private tracker and plan for gaining healthy weight.",
-  appleWebApp: { capable: true, title: "Nourish", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Nourish", statusBarStyle: "black-translucent" },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#fff7f5",
+  themeColor: "#0b1222",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en-AU">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+      </head>
       <body className="antialiased">
         {children}
         <ServiceWorker />

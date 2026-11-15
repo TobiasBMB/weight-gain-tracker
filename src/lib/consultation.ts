@@ -15,6 +15,7 @@ export const SECTIONS: Section[] = [
     title: "About you",
     intro: "The basics, so the numbers are right for your body.",
     questions: [
+      { id: "preferred_name", label: "What should we call you?", type: "text", placeholder: "Your first name" },
       { id: "age", label: "Age", type: "number", unit: "years", min: 16, max: 100, required: true },
       { id: "sex", label: "Sex", type: "select", options: ["Female", "Male"], required: true },
       { id: "height_cm", label: "Height", type: "number", unit: "cm", min: 120, max: 220, required: true },

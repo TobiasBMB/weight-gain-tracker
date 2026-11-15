@@ -34,10 +34,10 @@ export default async function ProgressPage() {
   const latestWeight = weights.at(-1)?.weight ?? null;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-rose-900">Progress</h1>
-      <section className="grid grid-cols-2 gap-3">
-        <Stat label="Weight now" value={latestWeight ? `${latestWeight} kg` : "–"} sub={startWeight && latestWeight ? `${latestWeight - startWeight >= 0 ? "+" : ""}${(latestWeight - startWeight).toFixed(1)} kg since start` : "Log it in your check-in"} />
+    <div className="space-y-3.5">
+      <h1 className="px-1 text-2xl font-extrabold tracking-tight">Progress</h1>
+      <section className="grid grid-cols-2 gap-2.5">
+        <Stat accent="text-baby font-semibold" label="Weight now" value={latestWeight ? `${latestWeight} kg` : "–"} sub={startWeight && latestWeight ? `${latestWeight - startWeight >= 0 ? "+" : ""}${(latestWeight - startWeight).toFixed(1)} kg since start` : "Log it in your check-in"} />
         <Stat label="Avg calories (7 logged days)" value={`${avg(last7.map((d) => d.calories!)) ?? "–"}`} sub={targets ? `target ${targets.calories}` : ""} />
         <Stat label="Avg protein (7 logged days)" value={`${avg(last7.map((d) => d.protein!)) ?? "–"} g`} sub={targets ? `target ${targets.protein_g} g` : ""} />
         <Stat label="Days logged" value={`${logged.length}`} sub="in the last 30" />
@@ -47,12 +47,12 @@ export default async function ProgressPage() {
   );
 }
 
-function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
+function Stat({ label, value, sub, accent = "" }: { label: string; value: string; sub: string; accent?: string }) {
   return (
-    <div className="card">
-      <p className="text-sm text-stone-500">{label}</p>
-      <p className="text-2xl font-semibold text-rose-900">{value}</p>
-      <p className="text-xs text-stone-500">{sub}</p>
+    <div className="tile">
+      <p className="text-sm text-muted">{label}</p>
+      <p className="text-[26px] font-extrabold leading-tight">{value}</p>
+      <p className={`text-[13px] ${accent || "text-muted"}`}>{sub}</p>
     </div>
   );
 }

@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Chip, Scale } from "@/components/Chip";
+import { Icon } from "@/components/Icon";
 import { SECTIONS, type Answers, type Question } from "@/lib/consultation";
-import { Chip } from "@/components/Chip";
 import { saveConsultation } from "./actions";
 
 export function ConsultationForm({ initial, isRedo }: { initial: Answers; isRedo: boolean }) {
@@ -14,17 +15,25 @@ export function ConsultationForm({ initial, isRedo }: { initial: Answers; isRedo
   const [error, setError] = useState("");
 
   const set = (id: string, v: Answers[string]) => setAnswers((a) => ({ ...a, [id]: v }));
+  const go = (n: number) => {
+    setStep(n);
+    window.scrollTo({ top: 0 });
+  };
 
   if (step === -1) {
     return (
       <section className="card space-y-4">
-        <h1 className="text-2xl font-semibold text-rose-900">{isRedo ? "Update your consultation" : "Your consultation"}</h1>
-        <p className="text-stone-700">
-          {SECTIONS.length} short sections about your routine, eating, exercise, skin, stress and health. It takes about 10
-          minutes. Your answers are private to your account.
+        <span className="eyebrow">Consultation</span>
+        <h1 className="text-[26px] font-extrabold leading-tight tracking-tight">
+          {isRedo ? "Update your answers" : "Let's get to know you"}
+        </h1>
+        <p className="leading-relaxed text-soft">
+          {SECTIONS.length} short sections about your routine, eating, exercise, skin, stress and health. About 10 minutes.
         </p>
-        <p className="text-stone-700">Skip anything you don&apos;t want to answer. The more you share, the better your plan.</p>
-        <button className="btn-primary w-full" onClick={() => setStep(0)}>
+        <p className="leading-relaxed text-soft">
+          Only you can see your answers. Skip anything you don&apos;t want to answer, but the more you share, the better your plan.
+        </p>
+        <button className="btn-primary w-full" onClick={() => go(0)}>
           {isRedo ? "Review my answers" : "Let's start"}
         </button>
       </section>
@@ -57,77 +66,71 @@ export function ConsultationForm({ initial, isRedo }: { initial: Answers; isRedo
 
   if (status === "planning") {
     return (
-      <section className="card space-y-3 text-center">
-        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-rose-200 border-t-rose-700" />
-        <h2 className="text-lg font-semibold text-rose-900">Writing your plan…</h2>
-        <p className="text-stone-600">This usually takes under a minute.</p>
+      <section className="card space-y-3 py-10 text-center">
+        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-line border-t-baby" />
+        <h2 className="text-lg font-bold">Writing your plan…</h2>
+        <p className="text-muted">This usually takes under a minute.</p>
       </section>
     );
   }
 
   return (
-    <section className="space-y-4">
-      <div>
-        <div className="h-2 overflow-hidden rounded-full bg-rose-100">
-          <div className="h-full bg-rose-600 transition-all" style={{ width: `${((step + 1) / SECTIONS.length) * 100}%` }} />
+    <div className="space-y-3.5">
+      <div className="flex items-center gap-3 px-1">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-line-soft" aria-hidden="true">
+          <div className="h-full rounded-full bg-baby transition-all" style={{ width: `${((step + 1) / SECTIONS.length) * 100}%` }} />
         </div>
-        <p className="mt-2 text-sm text-stone-500">
-          Section {step + 1} of {SECTIONS.length}
-        </p>
+        <span className="text-sm text-muted">
+          {step + 1} of {SECTIONS.length}
+        </span>
       </div>
 
-      <div className="card space-y-5">
-        <div>
-          <h2 className="text-xl font-semibold text-rose-900">{section.title}</h2>
-          <p className="mt-1 text-stone-600">{section.intro}</p>
+      <section className="card space-y-5">
+        <div className="space-y-1.5">
+          <span className="eyebrow">{section.title}</span>
+          <p className="text-[15px] leading-relaxed text-soft">{section.intro}</p>
         </div>
         {section.questions.map((q) => (
           <Field key={q.id} q={q} value={answers[q.id]} onChange={(v) => set(q.id, v)} />
         ))}
-      </div>
+      </section>
 
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="px-1 text-sm text-danger">{error}</p>}
 
-      <div className="flex gap-3">
-        <button className="btn-secondary flex-1" onClick={() => setStep(step - 1)} disabled={status !== "idle"}>
+      <div className="flex gap-2.5">
+        <button className="btn-secondary flex-1" onClick={() => go(step - 1)} disabled={status !== "idle"}>
           Back
         </button>
         {last ? (
           <button className="btn-primary flex-1" onClick={finish} disabled={status !== "idle"}>
-            {status === "saving" ? "Saving…" : "Finish and get my plan"}
+            {status === "saving" ? "Saving…" : "Get my plan"}
           </button>
         ) : (
-          <button
-            className="btn-primary flex-1"
-            onClick={() => {
-              setStep(step + 1);
-              window.scrollTo({ top: 0 });
-            }}
-          >
+          <button className="btn-primary flex-1" onClick={() => go(step + 1)}>
             Next
           </button>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 
 function Field({ q, value, onChange }: { q: Question; value: Answers[string]; onChange: (v: Answers[string]) => void }) {
-  const label = (
-    <span className="label">
+  const title = (
+    <span className="block text-[17px] font-bold leading-snug">
       {q.label}
-      {"required" in q && q.required && <span className="text-rose-700"> *</span>}
+      {"required" in q && q.required && <span className="text-blush"> *</span>}
     </span>
   );
-  const help = q.help && <span className="mt-0.5 block text-sm text-stone-500">{q.help}</span>;
+  const help = q.help && <span className="mt-0.5 block text-sm text-muted">{q.help}</span>;
 
   switch (q.type) {
     case "number":
       return (
         <label className="block">
-          {label}
+          {title}
           {help}
-          <div className="mt-1 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-2">
             <input
               type="number"
               inputMode="decimal"
@@ -138,7 +141,7 @@ function Field({ q, value, onChange }: { q: Question; value: Answers[string]; on
               onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
               className="input"
             />
-            {q.unit && <span className="text-stone-500">{q.unit}</span>}
+            {q.unit && <span className="w-12 shrink-0 text-muted">{q.unit}</span>}
           </div>
         </label>
       );
@@ -146,42 +149,70 @@ function Field({ q, value, onChange }: { q: Question; value: Answers[string]; on
     case "time":
       return (
         <label className="block">
-          {label}
+          {title}
           {help}
           <input
             type={q.type}
             placeholder={q.placeholder}
             value={(value as string) ?? ""}
             onChange={(e) => onChange(e.target.value)}
-            className="input mt-1"
+            className="input mt-2"
           />
         </label>
       );
     case "textarea":
       return (
         <label className="block">
-          {label}
+          {title}
           {help}
           <textarea
             rows={3}
             placeholder={q.placeholder}
             value={(value as string) ?? ""}
             onChange={(e) => onChange(e.target.value)}
-            className="input mt-1"
+            className="input mt-2 resize-none"
           />
         </label>
       );
     case "select":
+      // Short answers (counts, yes/no) read best as chips; longer ones as a list.
+      if (q.options.every((o) => o.length <= 14)) {
+        return (
+          <fieldset>
+            <legend>{title}</legend>
+            {help}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {q.options.map((o) => (
+                <Chip key={o} active={value === o} onClick={() => onChange(value === o ? undefined : o)}>
+                  {o}
+                </Chip>
+              ))}
+            </div>
+          </fieldset>
+        );
+      }
       return (
         <fieldset>
-          <legend>{label}</legend>
+          <legend>{title}</legend>
           {help}
-          <div className="mt-2 flex flex-wrap gap-2">
-            {q.options.map((o) => (
-              <Chip key={o} active={value === o} onClick={() => onChange(value === o ? undefined : o)}>
-                {o}
-              </Chip>
-            ))}
+          <div className="mt-2 space-y-2">
+            {q.options.map((o) => {
+              const on = value === o;
+              return (
+                <button
+                  key={o}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => onChange(on ? undefined : o)}
+                  className={`flex min-h-[52px] w-full items-center gap-3 rounded-[14px] border px-4 text-left text-[15px] font-medium ${
+                    on ? "border-baby bg-baby-dim" : "border-line hover:border-muted"
+                  }`}
+                >
+                  <span className={`h-5 w-5 shrink-0 rounded-full ${on ? "border-[6px] border-baby" : "border-2 border-[#3A4A6B]"}`} />
+                  {o}
+                </button>
+              );
+            })}
           </div>
         </fieldset>
       );
@@ -189,8 +220,9 @@ function Field({ q, value, onChange }: { q: Question; value: Answers[string]; on
       const selected = Array.isArray(value) ? value : [];
       return (
         <fieldset>
-          <legend>{label}</legend>
+          <legend>{title}</legend>
           {help}
+          <span className="mt-0.5 block text-sm text-muted">Pick any that apply.</span>
           <div className="mt-2 flex flex-wrap gap-2">
             {q.options.map((o) => (
               <Chip
@@ -198,6 +230,7 @@ function Field({ q, value, onChange }: { q: Question; value: Answers[string]; on
                 active={selected.includes(o)}
                 onClick={() => onChange(selected.includes(o) ? selected.filter((s) => s !== o) : [...selected, o])}
               >
+                {selected.includes(o) && <Icon name="check" size={14} strokeWidth={2.6} className="-ml-0.5 mr-1 inline" />}
                 {o}
               </Chip>
             ))}
@@ -208,16 +241,12 @@ function Field({ q, value, onChange }: { q: Question; value: Answers[string]; on
     case "scale":
       return (
         <fieldset>
-          <legend>{label}</legend>
+          <legend>{title}</legend>
           {help}
-          <div className="mt-2 grid grid-cols-5 gap-2">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <Chip key={n} active={value === n} onClick={() => onChange(value === n ? undefined : n)}>
-                {n}
-              </Chip>
-            ))}
+          <div className="mt-2">
+            <Scale label={q.label} value={value as number | undefined} onChange={(n) => onChange(n ?? undefined)} />
           </div>
-          <div className="mt-1 flex justify-between text-xs text-stone-500">
+          <div className="mt-1 flex justify-between text-xs text-muted">
             <span>{q.low}</span>
             <span>{q.high}</span>
           </div>

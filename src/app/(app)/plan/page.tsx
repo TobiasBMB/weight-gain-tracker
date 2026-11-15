@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CardTitle, Icon, type IconName } from "@/components/Icon";
 import { RegenerateButton } from "@/components/RegenerateButton";
 import type { Plan } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
@@ -13,169 +14,174 @@ export default async function PlanPage() {
 
   if (!consultation) {
     return (
-      <div className="card space-y-3">
-        <h1 className="text-xl font-semibold text-rose-900">No plan yet</h1>
-        <p className="text-stone-700">Start with the consultation so the plan fits you.</p>
-        <Link href="/consultation" className="btn-primary block text-center">
+      <section className="card space-y-3">
+        <h1 className="text-xl font-bold">No plan yet</h1>
+        <p className="text-soft">Start with the consultation so the plan fits you.</p>
+        <Link href="/consultation" className="btn-primary">
           Start consultation
         </Link>
-      </div>
+      </section>
     );
   }
 
-  if (!row) return <div className="card"><RegenerateButton label="Create my plan" /></div>;
+  if (!row) {
+    return (
+      <section className="card space-y-3">
+        <h1 className="text-xl font-bold">Your plan</h1>
+        <p className="text-soft">Your consultation is saved. Create your personal plan now.</p>
+        <RegenerateButton label="Create my plan" primary />
+      </section>
+    );
+  }
 
   const plan = row.plan as Plan;
   const t = row.targets as Targets;
   const outdated = row.consultation_id !== consultation.id;
+  const dayKcal = Math.round(plan.daily_plan.reduce((s, m) => s + m.calories, 0));
+  const dayProtein = Math.round(plan.daily_plan.reduce((s, m) => s + m.protein_g, 0));
 
   return (
-    <div className="space-y-4">
-      <section className="card">
-        <h1 className="text-2xl font-semibold text-rose-900">Your plan</h1>
-        <p className="mt-1 text-xs text-stone-500">
+    <div className="space-y-3.5">
+      <div className="flex items-baseline justify-between px-1">
+        <h1 className="text-2xl font-extrabold tracking-tight">My plan</h1>
+        <span className="text-[13px] text-muted">
           Updated {new Date(row.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
-        </p>
-        <p className="mt-3 text-stone-800">{plan.summary}</p>
+        </span>
+      </div>
+
+      <section className="card space-y-2">
+        <span className="eyebrow">This week, focus on</span>
+        <p className="text-lg font-bold leading-snug">{plan.this_week_focus}</p>
       </section>
 
-      <section className="grid grid-cols-2 gap-3">
-        <Stat label="Calories a day" value={`${t.calories}`} sub={`maintenance ≈ ${t.maintenance}`} />
-        <Stat label="Protein a day" value={`${t.protein_g} g`} sub={`fat ${t.fat_g} g · carbs ${t.carbs_g} g`} />
-        <Stat label="BMI now" value={`${t.bmi}`} sub="healthy is 18.5–25" />
-        <Stat label="Aim to gain" value={`${t.weekly_gain_kg} kg`} sub={t.goal_weight_kg ? `a week, to ${t.goal_weight_kg} kg` : "a week"} />
+      <div className="grid grid-cols-2 gap-2.5">
+        <Tile value={t.calories.toLocaleString("en-AU")} label="Calories a day" className="text-baby" />
+        <Tile value={`${t.protein_g} g`} label="Protein a day" className="text-blush" />
+        <Tile value={`${t.bmi}`} label="BMI (healthy 18.5+)" />
+        <Tile value={t.goal_weight_kg ? `${t.goal_weight_kg} kg` : `${t.weekly_gain_kg}`} label={t.goal_weight_kg ? `Goal, ${t.weekly_gain_kg} kg a week` : "kg to gain a week"} />
+      </div>
+
+      <section className="card">
+        <p className="leading-relaxed text-soft">{plan.summary}</p>
+        {plan.progress_notes && <p className="mt-3 leading-relaxed text-soft">{plan.progress_notes}</p>}
       </section>
-
-      <Card title="This week, focus on">
-        <p className="font-medium text-rose-900">{plan.this_week_focus}</p>
-      </Card>
-
-      {plan.progress_notes && (
-        <Card title="How you're tracking">
-          <p className="text-stone-800">{plan.progress_notes}</p>
-        </Card>
-      )}
 
       {plan.check_with_doctor.length > 0 && (
-        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <h2 className="font-semibold text-amber-900">Worth a chat with your GP</h2>
-          <ul className="mt-2 space-y-1.5 text-amber-950">
-            {plan.check_with_doctor.map((d, i) => (
-              <li key={i}>
-                {d.urgency === "soon" && <span className="mr-1 font-semibold">Soon:</span>}
-                {d.reason}
+        <section className="flex gap-3 rounded-[20px] border border-blush bg-card p-4">
+          <Icon name="heart" size={22} strokeWidth={2} className="mt-0.5 shrink-0 text-blush" />
+          <div>
+            <h2 className="text-[15px] font-bold">Worth a chat with your GP</h2>
+            <ul className="mt-1 space-y-1 text-sm leading-relaxed text-soft">
+              {plan.check_with_doctor.map((d, i) => (
+                <li key={i}>
+                  {d.urgency === "soon" && <span className="font-semibold text-blush">Soon: </span>}
+                  {d.reason}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      <section className="card">
+        <CardTitle icon="calendar" action={<span className="text-[13px] text-muted">≈ {dayKcal.toLocaleString("en-AU")} kcal · {dayProtein} g</span>}>
+          A sample day
+        </CardTitle>
+        <ul className="space-y-2">
+          {plan.daily_plan.map((m, i) => (
+            <li key={i} className="row flex gap-3.5">
+              <span className="w-[62px] shrink-0 text-sm font-bold">{m.time}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold leading-snug">{m.foods}</p>
+                <p className="text-[13px] text-muted">
+                  {m.meal} · {Math.round(m.calories)} kcal · <span className="text-blush">{Math.round(m.protein_g)} g protein</span>
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <ListCard icon="spark" title="Easy wins" items={plan.easy_wins} />
+
+      {plan.swaps.length > 0 && (
+        <section className="card">
+          <CardTitle icon="next">Simple swaps</CardTitle>
+          <ul className="space-y-2">
+            {plan.swaps.map((s, i) => (
+              <li key={i} className="row">
+                <p className="text-[15px]">
+                  <span className="text-muted line-through">{s.instead_of}</span> → <span className="font-semibold">{s.try}</span>
+                </p>
+                <p className="mt-0.5 text-[13px] text-muted">{s.why}</p>
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      <Card title="A sample day">
-        <ol className="divide-y divide-rose-50">
-          {plan.daily_plan.map((m, i) => (
-            <li key={i} className="py-2.5">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-medium text-stone-900">
-                  {m.time} · {m.meal}
-                </span>
-                <span className="shrink-0 text-sm text-stone-500">
-                  {Math.round(m.calories)} kcal · {Math.round(m.protein_g)} g
-                </span>
-              </div>
-              <p className="text-stone-700">{m.foods}</p>
-            </li>
-          ))}
-        </ol>
-        <p className="mt-2 text-sm text-stone-500">
-          Total ≈ {Math.round(plan.daily_plan.reduce((s, m) => s + m.calories, 0))} kcal,{" "}
-          {Math.round(plan.daily_plan.reduce((s, m) => s + m.protein_g, 0))} g protein
-        </p>
-      </Card>
-
-      <List title="Easy wins" items={plan.easy_wins} />
-
-      {plan.swaps.length > 0 && (
-        <Card title="Simple swaps">
-          <ul className="space-y-2.5">
-            {plan.swaps.map((s, i) => (
-              <li key={i}>
-                <p className="text-stone-900">
-                  <span className="text-stone-500 line-through">{s.instead_of}</span> → <span className="font-medium">{s.try}</span>
-                </p>
-                <p className="text-sm text-stone-600">{s.why}</p>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
       {plan.supplements.length > 0 && (
-        <Card title="Supplements">
-          <ul className="space-y-3">
+        <section className="card">
+          <CardTitle icon="pill">Supplements</CardTitle>
+          <ul className="space-y-2">
             {plan.supplements.map((s, i) => (
-              <li key={i}>
-                <p className="font-medium text-stone-900">{s.name}</p>
-                <p className="text-sm text-stone-700">
+              <li key={i} className="row space-y-0.5">
+                <p className="text-[15px] font-semibold">{s.name}</p>
+                <p className="text-[13px] text-baby">
                   {s.dose} · {s.timing}
                 </p>
-                <p className="text-sm text-stone-700">{s.why}</p>
-                {s.caution && <p className="text-sm text-amber-800">{s.caution}</p>}
+                <p className="text-sm text-soft">{s.why}</p>
+                {s.caution && <p className="text-[13px] text-blush">{s.caution}</p>}
               </li>
             ))}
           </ul>
-        </Card>
+        </section>
       )}
 
-      <List title="Training" items={plan.training} />
-      <List title="Skin and stress" items={plan.skin_and_stress} />
-      <List title="What's likely behind the weight loss" items={plan.likely_factors} />
-      <List title="Shopping list" items={plan.grocery_list} />
+      <ListCard icon="run" title="Training" items={plan.training} />
+      <ListCard icon="heart" title="Skin and stress" items={plan.skin_and_stress} />
+      <ListCard icon="pulse" title="What's likely behind the weight loss" items={plan.likely_factors} />
+      <ListCard icon="cart" title="Shopping list" items={plan.grocery_list} />
 
       <section className="card space-y-3">
-        <p className="text-sm text-stone-600">
+        <p className="text-sm text-muted">
           {outdated
             ? "You've updated your consultation since this plan was written."
             : "Refresh after a week or two of logging so the plan can learn from what you actually eat."}
         </p>
-        <RegenerateButton label={outdated ? "Update my plan" : "Refresh my plan"} />
+        <RegenerateButton label={outdated ? "Update my plan" : "Refresh my plan"} primary={outdated} />
       </section>
 
-      <p className="px-1 text-xs text-stone-500">
-        General guidance only, not medical advice. Check with your GP or pharmacist before starting supplements, especially
-        if you take medication or could be pregnant.
+      <p className="px-1 text-xs leading-relaxed text-muted">
+        General guidance only, not medical advice. Check with your GP or pharmacist before starting supplements, especially if
+        you take medication or could be pregnant.
       </p>
     </div>
   );
 }
 
-function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
+function Tile({ value, label, className = "" }: { value: string; label: string; className?: string }) {
   return (
-    <div className="card">
-      <p className="text-sm text-stone-500">{label}</p>
-      <p className="text-2xl font-semibold text-rose-900">{value}</p>
-      <p className="text-xs text-stone-500">{sub}</p>
+    <div className="tile">
+      <p className={`text-[28px] font-extrabold leading-tight ${className}`}>{value}</p>
+      <p className="text-sm text-muted">{label}</p>
     </div>
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="card">
-      <h2 className="mb-2 font-semibold text-stone-900">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function List({ title, items }: { title: string; items: string[] }) {
+function ListCard({ icon, title, items }: { icon: IconName; title: string; items: string[] }) {
   if (!items.length) return null;
   return (
-    <Card title={title}>
-      <ul className="list-disc space-y-1.5 pl-5 text-stone-800">
+    <section className="card">
+      <CardTitle icon={icon}>{title}</CardTitle>
+      <ul className="space-y-2">
         {items.map((s, i) => (
-          <li key={i}>{s}</li>
+          <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed text-soft">
+            <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-baby" aria-hidden="true" />
+            <span>{s}</span>
+          </li>
         ))}
       </ul>
-    </Card>
+    </section>
   );
 }

@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Switch } from "@/components/Chip";
+import { Icon } from "@/components/Icon";
 import { InstallTip } from "@/components/InstallTip";
 import { isIos, isStandalone } from "@/lib/pwa";
 import { createClient } from "@/lib/supabase/client";
+import { signOut } from "../../login/actions";
 import { removeSubscription, saveSettings, saveSubscription, type ReminderSettings } from "./actions";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -121,89 +124,94 @@ export function Reminders({ initial }: { initial: ReminderSettings }) {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-rose-900">Reminders</h1>
+    <div className="space-y-3.5">
+      <h1 className="px-1 text-2xl font-extrabold tracking-tight">Reminders</h1>
       <InstallTip />
 
-      <section className="card space-y-3">
-        {status === "checking" && <p className="text-stone-600">Checking this device…</p>}
+      <section className="card space-y-3.5">
+        <div className="flex items-center gap-3">
+          <span className="icon-tile">
+            <Icon name="bell" />
+          </span>
+          <div>
+            <p className="text-base font-bold">
+              {status === "on" ? "Notifications are on" : status === "checking" ? "Checking this device…" : "Notifications are off"}
+            </p>
+            <p className="text-sm text-muted">{status === "on" ? "For this device" : "Gentle nudges, only when you need them"}</p>
+          </div>
+        </div>
         {status === "needs-install" && (
-          <p className="text-stone-700">
-            On iPhone, notifications only work once Nourish is on your Home Screen. Follow the steps above, then open
-            Nourish from the Home Screen and come back here.
+          <p className="text-[15px] leading-relaxed text-soft">
+            On iPhone, notifications only work once Nourish is on your Home Screen. Follow the steps above, then open Nourish
+            from the Home Screen and come back here.
           </p>
         )}
         {status === "unsupported" && (
-          <p className="text-stone-700">This browser can&apos;t show notifications. On iPhone, update to iOS 16.4 or newer.</p>
+          <p className="text-[15px] text-soft">This browser can&apos;t show notifications. On iPhone, update to iOS 16.4 or newer.</p>
         )}
         {status === "denied" && (
-          <p className="text-stone-700">
+          <p className="text-[15px] leading-relaxed text-soft">
             Notifications are blocked. On iPhone go to Settings → Notifications → Nourish and turn on Allow Notifications.
           </p>
         )}
         {status === "off" && (
-          <>
-            <p className="text-stone-700">Gentle nudges to eat, check in and weigh in. You choose which ones and when.</p>
-            <button className="btn-primary w-full" onClick={turnOn} disabled={busy}>
-              {busy ? "Turning on…" : "Turn on reminders"}
-            </button>
-          </>
+          <button className="btn-primary w-full" onClick={turnOn} disabled={busy}>
+            {busy ? "Turning on…" : "Turn on reminders"}
+          </button>
         )}
         {status === "on" && (
-          <>
-            <p className="font-medium text-emerald-700">Reminders are on for this device ✓</p>
-            <div className="flex gap-2">
-              <button className="btn-secondary flex-1" onClick={test} disabled={busy}>
-                Send a test
-              </button>
-              <button className="btn-secondary flex-1" onClick={turnOff} disabled={busy}>
-                Turn off
-              </button>
-            </div>
-          </>
+          <div className="flex gap-2.5">
+            <button className="btn-outline flex-1" onClick={test} disabled={busy}>
+              Send a test
+            </button>
+            <button className="btn-secondary flex-1" onClick={turnOff} disabled={busy}>
+              Turn off
+            </button>
+          </div>
         )}
-        {message && <p className="text-sm text-stone-700">{message}</p>}
+        {message && <p className="text-sm text-soft">{message}</p>}
       </section>
 
-      <section className="card space-y-5">
+      <section className="card divide-y divide-line-soft py-1">
         <Toggle
           label="Snack nudges"
-          help="Only sent if you haven't logged food in the last 2½ hours."
+          help="Skipped if you've eaten in the last 2½ hours"
           checked={settings.meal_nudges}
           onChange={(v) => update({ meal_nudges: v })}
         >
           <div className="flex flex-wrap items-center gap-2">
             {settings.meal_times.map((t, i) => (
-              <span key={i} className="flex items-center gap-1">
+              <span key={i} className="flex items-center">
                 <input
                   type="time"
+                  aria-label={`Snack time ${i + 1}`}
                   value={t}
                   onChange={(e) => update({ meal_times: settings.meal_times.map((x, j) => (j === i ? e.target.value : x)) })}
-                  className="input w-32"
+                  className="input w-[140px] py-2"
                 />
                 <button
                   type="button"
                   aria-label="Remove time"
-                  className="px-1 text-stone-400"
+                  className="flex h-11 w-9 items-center justify-center text-muted hover:text-danger"
                   onClick={() => update({ meal_times: settings.meal_times.filter((_, j) => j !== i) })}
                 >
-                  ✕
+                  <Icon name="x" size={16} />
                 </button>
               </span>
             ))}
             {settings.meal_times.length < 6 && (
-              <button type="button" className="text-sm text-rose-800 underline" onClick={() => update({ meal_times: [...settings.meal_times, "12:30"] })}>
+              <button type="button" className="text-sm font-medium text-baby" onClick={() => update({ meal_times: [...settings.meal_times, "12:30"] })}>
                 + Add time
               </button>
             )}
           </div>
         </Toggle>
 
-        <Toggle label="Evening check-in" help="Skipped if you've already checked in." checked={settings.checkin} onChange={(v) => update({ checkin: v })}>
-          <input type="time" value={settings.checkin_time} onChange={(e) => update({ checkin_time: e.target.value })} className="input w-32" />
+        <Toggle label="Evening check-in" help="Skipped if you've already checked in" checked={settings.checkin} onChange={(v) => update({ checkin: v })}>
+          <input type="time" aria-label="Check-in time" value={settings.checkin_time} onChange={(e) => update({ checkin_time: e.target.value })} className="input w-[140px] py-2" />
         </Toggle>
 
-        <Toggle label="Weekly weigh-in" checked={settings.weigh_in} onChange={(v) => update({ weigh_in: v })}>
+        <Toggle label="Weekly weigh-in" help="Before breakfast, same day each week" checked={settings.weigh_in} onChange={(v) => update({ weigh_in: v })}>
           <DayTime
             day={settings.weigh_in_day}
             time={settings.weigh_in_time}
@@ -211,18 +219,25 @@ export function Reminders({ initial }: { initial: ReminderSettings }) {
           />
         </Toggle>
 
-        <Toggle label="Weekly summary" checked={settings.weekly_summary} onChange={(v) => update({ weekly_summary: v })}>
+        <Toggle label="Weekly summary" help="Your week in numbers" checked={settings.weekly_summary} onChange={(v) => update({ weekly_summary: v })}>
           <DayTime
             day={settings.summary_day}
             time={settings.summary_time}
             onChange={(day, time) => update({ summary_day: day, summary_time: time })}
           />
         </Toggle>
-
-        <button className="btn-primary w-full" onClick={() => save(settings)}>
-          {saved ? "Saved ✓" : "Save reminder times"}
-        </button>
       </section>
+
+      <button className="btn-primary w-full" onClick={() => save(settings)}>
+        {saved ? "Saved ✓" : "Save reminder times"}
+      </button>
+
+      <form action={signOut} className="pt-4">
+        <button className="btn-secondary w-full gap-2">
+          <Icon name="logout" size={18} />
+          Sign out
+        </button>
+      </form>
     </div>
   );
 }
@@ -241,15 +256,15 @@ function Toggle({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <label className="flex items-center justify-between gap-3">
-        <span>
-          <span className="font-medium text-stone-900">{label}</span>
-          {help && <span className="block text-sm text-stone-500">{help}</span>}
-        </span>
-        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-6 w-6 accent-rose-700" />
-      </label>
-      {checked && <div className="mt-2">{children}</div>}
+    <div className="py-3.5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[15px] font-semibold">{label}</p>
+          {help && <p className="text-[13px] text-muted">{help}</p>}
+        </div>
+        <Switch checked={checked} onChange={onChange} label={label} />
+      </div>
+      {checked && <div className="mt-3">{children}</div>}
     </div>
   );
 }
@@ -257,14 +272,14 @@ function Toggle({
 function DayTime({ day, time, onChange }: { day: number; time: string; onChange: (day: number, time: string) => void }) {
   return (
     <div className="flex gap-2">
-      <select value={day} onChange={(e) => onChange(Number(e.target.value), time)} className="input flex-1">
+      <select aria-label="Day" value={day} onChange={(e) => onChange(Number(e.target.value), time)} className="input flex-1 py-2">
         {DAYS.map((d, i) => (
           <option key={d} value={i}>
             {d}
           </option>
         ))}
       </select>
-      <input type="time" value={time} onChange={(e) => onChange(day, e.target.value)} className="input w-32" />
+      <input type="time" aria-label="Time" value={time} onChange={(e) => onChange(day, e.target.value)} className="input w-[140px] py-2" />
     </div>
   );
 }

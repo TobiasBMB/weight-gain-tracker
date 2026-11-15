@@ -1,11 +1,22 @@
 import Link from "next/link";
+import { CardTitle, Icon } from "@/components/Icon";
 import { InstallTip } from "@/components/InstallTip";
-import { addDays, dayKey, formatDay, formatTime, startOfDay } from "@/lib/dates";
+import type { Answers } from "@/lib/consultation";
+import { addDays, dayKey, formatTime, startOfDay, TIME_ZONE } from "@/lib/dates";
 import type { ActivityLog, Checkin, FoodLog } from "@/lib/logs";
 import { createClient } from "@/lib/supabase/server";
 import { computeTargets } from "@/lib/targets";
-import type { Answers } from "@/lib/consultation";
-import { ActivityForm, CheckinForm, DeleteButton, FoodForm } from "./forms";
+import { ActivityForm, CheckinForm, DeleteButton } from "./forms";
+
+function greeting() {
+  const h = Number(new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, hour: "2-digit", hourCycle: "h23" }).format(new Date()));
+  if (h < 12) return { text: "Good morning", icon: "sun" as const };
+  if (h < 17) return { text: "Good afternoon", icon: "sun" as const };
+  return { text: "Good evening", icon: "moon" as const };
+}
+
+const longDay = (day: string) =>
+  new Intl.DateTimeFormat("en-AU", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" }).format(new Date(`${day}T00:00:00Z`));
 
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ day?: string }> }) {
   const params = await searchParams;
@@ -24,33 +35,61 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
 
   const foods = (food.data ?? []) as FoodLog[];
   const activities = (activity.data ?? []) as ActivityLog[];
-  const targets = consultation.data ? computeTargets(consultation.data.answers as Answers) : undefined;
+  const answers = consultation.data?.answers as Answers | undefined;
+  const targets = answers ? computeTargets(answers) : undefined;
+  const name = typeof answers?.preferred_name === "string" ? answers.preferred_name.trim().slice(0, 40) : "";
   const calories = foods.reduce((s, f) => s + (f.calories ?? 0), 0);
   const protein = Math.round(foods.reduce((s, f) => s + Number(f.protein_g ?? 0), 0));
+  const isToday = day === today;
+  const hello = greeting();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       <InstallTip />
-      <div className="flex items-center justify-between">
-        <Link href={`/today?day=${addDays(day, -1)}`} className="px-2 py-1 text-rose-800" aria-label="Previous day">
-          ←
-        </Link>
-        <h1 className="text-lg font-semibold">{day === today ? "Today" : formatDay(day)}</h1>
-        {day < today ? (
-          <Link href={`/today?day=${addDays(day, 1)}`} className="px-2 py-1 text-rose-800" aria-label="Next day">
-            →
-          </Link>
-        ) : (
-          <span className="w-8" />
-        )}
-      </div>
 
       <section className="card space-y-3">
-        <Bar label="Calories" value={calories} target={targets?.calories} unit="kcal" />
-        <Bar label="Protein" value={protein} target={targets?.protein_g} unit="g" />
-        {!targets && (
-          <p className="text-sm text-stone-600">
-            <Link href="/consultation" className="text-rose-800 underline">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <Icon name={hello.icon} size={16} className="text-baby" />
+            {isToday ? `${hello.text} · ` : ""}
+            {longDay(day)}
+          </div>
+          <div className="-mr-2 flex">
+            <Link href={`/today?day=${addDays(day, -1)}`} aria-label="Previous day" className="flex h-9 w-9 items-center justify-center rounded-lg text-soft hover:bg-raised">
+              <Icon name="back" size={18} />
+            </Link>
+            {!isToday && (
+              <Link href={`/today?day=${addDays(day, 1)}`} aria-label="Next day" className="flex h-9 w-9 items-center justify-center rounded-lg text-soft hover:bg-raised">
+                <Icon name="next" size={18} />
+              </Link>
+            )}
+          </div>
+        </div>
+        <h1 className="text-[30px] font-extrabold leading-tight tracking-tight">{isToday ? name || "Today" : "Looking back"}</h1>
+        <div className="flex gap-1" aria-hidden="true">
+          <span className="h-1 w-7 rounded-full bg-baby" />
+          <span className="h-1 w-7 rounded-full bg-blush" />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="rounded-full border border-line px-3 py-1.5 text-[13px] text-soft">
+            {foods.length} {foods.length === 1 ? "meal" : "meals"} logged
+          </span>
+          <span className="rounded-full border border-line px-3 py-1.5 text-[13px] text-soft">
+            {checkin.data ? "Check-in done" : "Check-in not done"}
+          </span>
+        </div>
+      </section>
+
+      <section className="card">
+        <CardTitle icon="pulse">{isToday ? "Today's targets" : "Targets"}</CardTitle>
+        {targets ? (
+          <div className="space-y-4">
+            <Bar label="Calories" value={calories} target={targets.calories} unit="kcal" color="bg-baby" />
+            <Bar label="Protein" value={protein} target={targets.protein_g} unit="g" color="bg-blush" />
+          </div>
+        ) : (
+          <p className="text-soft">
+            <Link href="/consultation" className="font-semibold text-baby">
               Do your consultation
             </Link>{" "}
             to get daily targets.
@@ -59,39 +98,53 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       </section>
 
       <section className="card">
-        <h2 className="mb-3 font-semibold">Food and drink</h2>
-        {foods.length > 0 && (
-          <ul className="mb-4 divide-y divide-rose-50">
+        <CardTitle
+          icon="bowl"
+          action={
+            <Link href={`/log?day=${day}`} className="text-[15px] font-semibold text-baby">
+              + Add
+            </Link>
+          }
+        >
+          Food
+        </CardTitle>
+        {foods.length ? (
+          <ul className="space-y-2">
             {foods.map((f) => (
-              <li key={f.id} className="flex items-start justify-between gap-3 py-2">
-                <div>
-                  <p className="text-sm text-stone-500">
-                    {formatTime(f.eaten_at)} · <span className="capitalize">{f.meal}</span>
-                  </p>
-                  <p className="text-stone-900">{f.description}</p>
-                  <p className="text-sm text-stone-500">
-                    {f.calories ?? "?"} kcal · {f.protein_g ?? "?"} g protein
+              <li key={f.id} className="row flex items-center gap-3.5 py-2 pr-1">
+                <span className="w-[62px] shrink-0 text-sm font-bold">{formatTime(f.eaten_at)}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-semibold">{f.description}</p>
+                  <p className="text-[13px] text-muted">
+                    <span className="capitalize">{f.meal}</span> · {f.calories ?? "?"} kcal ·{" "}
+                    <span className="text-blush">{f.protein_g ?? "?"} g protein</span>
                   </p>
                 </div>
                 <DeleteButton table="food_logs" id={f.id} />
               </li>
             ))}
           </ul>
+        ) : (
+          <Link href={`/log?day=${day}`} className="btn-outline w-full">
+            Log your first meal
+          </Link>
         )}
-        <FoodForm day={day} />
       </section>
 
       <section className="card">
-        <h2 className="mb-3 font-semibold">Exercise and activity</h2>
+        <CardTitle icon="run">Exercise</CardTitle>
         {activities.length > 0 && (
-          <ul className="mb-4 divide-y divide-rose-50">
+          <ul className="mb-3 space-y-2">
             {activities.map((a) => (
-              <li key={a.id} className="flex items-start justify-between gap-3 py-2">
-                <div>
-                  <p className="text-stone-900">
-                    <span className="capitalize">{a.kind}</span> · {a.minutes} min · {a.intensity}
+              <li key={a.id} className="row flex items-center gap-3 py-2 pr-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-semibold">
+                    <span className="capitalize">{a.kind}</span> · {a.minutes} min
                   </p>
-                  {a.description && <p className="text-sm text-stone-600">{a.description}</p>}
+                  <p className="truncate text-[13px] text-muted">
+                    <span className="capitalize">{a.intensity}</span>
+                    {a.description ? ` · ${a.description}` : ""}
+                  </p>
                 </div>
                 <DeleteButton table="activity_logs" id={a.id} />
               </li>
@@ -102,27 +155,29 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       </section>
 
       <section className="card">
-        <h2 className="mb-1 font-semibold">Daily check-in</h2>
-        <p className="mb-3 text-sm text-stone-600">Takes 20 seconds. Weigh yourself once a week, same time of day.</p>
+        <h2 className="text-[19px] font-bold">Daily check-in</h2>
+        <p className="mb-3.5 mt-0.5 text-sm text-muted">Takes 20 seconds. Weigh yourself once a week, same time of day.</p>
         <CheckinForm key={day} day={day} initial={(checkin.data as Checkin | null) ?? null} />
       </section>
     </div>
   );
 }
 
-function Bar({ label, value, target, unit }: { label: string; value: number; target?: number; unit: string }) {
-  const pct = target ? Math.min(100, (value / target) * 100) : 0;
+function Bar({ label, value, target, unit, color }: { label: string; value: number; target: number; unit: string; color: string }) {
+  const pct = Math.min(100, (value / target) * 100);
   return (
-    <div>
+    <div className="space-y-1.5">
       <div className="flex justify-between text-sm">
-        <span className="font-medium text-stone-800">{label}</span>
-        <span className="text-stone-600">
-          {value}
-          {target ? ` / ${target}` : ""} {unit}
+        <span className="text-soft">{label}</span>
+        <span>
+          <b>{value.toLocaleString("en-AU")}</b>{" "}
+          <span className="text-muted">
+            / {target.toLocaleString("en-AU")} {unit}
+          </span>
         </span>
       </div>
-      <div className="mt-1 h-3 overflow-hidden rounded-full bg-rose-100">
-        <div className={`h-full rounded-full ${pct >= 90 ? "bg-emerald-500" : "bg-rose-500"}`} style={{ width: `${pct}%` }} />
+      <div className="h-2.5 overflow-hidden rounded-full bg-line-soft">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
