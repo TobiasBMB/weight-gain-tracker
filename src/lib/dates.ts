@@ -1,4 +1,15 @@
-export const TIME_ZONE = process.env.NEXT_PUBLIC_TIME_ZONE || "Australia/Sydney";
+function validTimeZone(tz: string | undefined) {
+  if (!tz) return null;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: tz });
+    return tz;
+  } catch {
+    console.error(`Invalid NEXT_PUBLIC_TIME_ZONE "${tz}", falling back to Australia/Sydney`);
+    return null;
+  }
+}
+
+export const TIME_ZONE = validTimeZone(process.env.NEXT_PUBLIC_TIME_ZONE) ?? "Australia/Sydney";
 
 /** YYYY-MM-DD for the given instant in the app's time zone. */
 export function dayKey(date: Date = new Date()) {
