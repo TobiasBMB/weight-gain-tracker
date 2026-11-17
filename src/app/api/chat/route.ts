@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     const { data: saved, error: saveError } = await supabase
       .from("chat_messages")
       .insert([
-        { role: "user", content: message, created_at: new Date(at - 1).toISOString() },
+        { role: "user", content: message, actions: [], created_at: new Date(at - 1).toISOString() },
         { role: "assistant", content: reply, actions, created_at: new Date(at).toISOString() },
       ])
       .select("id, role, content, actions, created_at");
